@@ -15,6 +15,7 @@ A remote MCP and REST service for generating `.docx` files with `github.com/mmon
 - Image embedding from base64 or URL
 - Runtime temp-file storage with download endpoint
 - Eino integration example
+- Multiple Eino integration examples
 - Docker deployment support
 
 ## Quick Start
