@@ -8,11 +8,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/yong/image-generation-mcp-server/internal/apiserver"
-	"github.com/yong/image-generation-mcp-server/internal/config"
-	"github.com/yong/image-generation-mcp-server/internal/mcpserver"
-	"github.com/yong/image-generation-mcp-server/internal/provider/ark"
-	imagesvc "github.com/yong/image-generation-mcp-server/internal/service/image"
+	"github.com/yong/doc-generation-mcp-server/internal/apiserver"
+	"github.com/yong/doc-generation-mcp-server/internal/config"
+	"github.com/yong/doc-generation-mcp-server/internal/mcpserver"
+	provider "github.com/yong/doc-generation-mcp-server/internal/provider/docx"
+	docsvc "github.com/yong/doc-generation-mcp-server/internal/service/document"
 )
 
 func main() {
@@ -21,8 +21,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	provider := ark.NewClient(cfg)
-	service := imagesvc.NewService(cfg, provider)
+	providerClient := provider.NewClient(cfg)
+	service := docsvc.NewService(cfg, providerClient)
 
 	mcpHandler := mcpserver.NewHandler(cfg, service)
 	apiHandler := apiserver.NewHandler(cfg, service)

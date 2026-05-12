@@ -11,17 +11,19 @@ import (
 )
 
 type Config struct {
-	HTTPAddr             string
-	APIPrefix            string
-	MCPPath              string
-	ARKAPIKey            string
-	ARKBaseURL           string
-	ARKImageEndpointPath string
-	ARKTextModel         string
-	ARKImageModel        string
-	RequestTimeout       time.Duration
-	MCPServerName        string
-	MCPServerVersion     string
+	HTTPAddr                string
+	APIPrefix               string
+	MCPPath                 string
+	RequestTimeout          time.Duration
+	MCPServerName           string
+	MCPServerVersion        string
+	DocxTempDir             string
+	DocxTemplateDir         string
+	DocxDefaultAuthor       string
+	DocxDefaultFont         string
+	DocxDefaultFontSize     int
+	DocxMaxRequestBodyBytes int64
+	DocxMaxFileAge          time.Duration
 }
 
 func Load() (Config, error) {
@@ -34,22 +36,45 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
-	cfg := Config{
-		HTTPAddr:             envOrDefault("HTTP_ADDR", ":9101"),
-		APIPrefix:            normalizePath(envOrDefault("API_PREFIX", "/api/v1")),
-		MCPPath:              normalizePath(envOrDefault("MCP_PATH", "/mcp")),
-		ARKAPIKey:            strings.TrimSpace(os.Getenv("ARK_API_KEY")),
-		ARKBaseURL:           strings.TrimRight(envOrDefault("ARK_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3"), "/"),
-		ARKImageEndpointPath: normalizePath(envOrDefault("ARK_IMAGE_ENDPOINT_PATH", "/images/generations")),
-		ARKTextModel:         envOrDefault("ARK_MODEL_TEXT2IMAGE", "doubao-seedream-4-5-251128"),
-		ARKImageModel:        envOrDefault("ARK_MODEL_IMAGE2IMAGE", "doubao-seedream-4-5-251128"),
-		RequestTimeout:       time.Duration(timeoutSeconds) * time.Second,
-		MCPServerName:        envOrDefault("MCP_SERVER_NAME", "seedream-image-server"),
-		MCPServerVersion:     envOrDefault("MCP_SERVER_VERSION", "0.1.0"),
+	fontSize, err := intFromEnv("DOCX_DEFAULT_FONT_SIZE", 22)
+	if err != nil {
+		return Config{}, err
 	}
 
-	if cfg.ARKAPIKey == "" {
-		return Config{}, fmt.Errorf("ARK_API_KEY is required")
+	maxRequestBytes, err := int64FromEnv("DOCX_MAX_REQUEST_BODY_BYTES", 2<<20)
+	if err != nil {
+		return Config{}, err
+	}
+
+	maxFileAgeMinutes, err := intFromEnv("DOCX_MAX_FILE_AGE_MINUTES", 60)
+	if err != nil {
+		return Config{}, err
+	}
+
+	tempDir := strings.TrimSpace(os.Getenv("DOCX_TEMP_DIR"))
+	if tempDir == "" {
+		tempDir = filepath.Join(os.TempDir(), "doc-generation-mcp-server")
+	}
+
+	templateDir := strings.TrimSpace(os.Getenv("DOCX_TEMPLATE_DIR"))
+	if templateDir == "" {
+		templateDir = filepath.Join(".", "templates")
+	}
+
+	cfg := Config{
+		HTTPAddr:                envOrDefault("HTTP_ADDR", ":9103"),
+		APIPrefix:               normalizePath(envOrDefault("API_PREFIX", "/api/v1")),
+		MCPPath:                 normalizePath(envOrDefault("MCP_PATH", "/mcp")),
+		RequestTimeout:          time.Duration(timeoutSeconds) * time.Second,
+		MCPServerName:           envOrDefault("MCP_SERVER_NAME", "docx-generation-server"),
+		MCPServerVersion:        envOrDefault("MCP_SERVER_VERSION", "0.1.0"),
+		DocxTempDir:             tempDir,
+		DocxTemplateDir:         templateDir,
+		DocxDefaultAuthor:       envOrDefault("DOCX_DEFAULT_AUTHOR", "doc-generation-mcp-server"),
+		DocxDefaultFont:         envOrDefault("DOCX_DEFAULT_FONT", "Calibri"),
+		DocxDefaultFontSize:     fontSize,
+		DocxMaxRequestBodyBytes: maxRequestBytes,
+		DocxMaxFileAge:          time.Duration(maxFileAgeMinutes) * time.Minute,
 	}
 
 	return cfg, nil
@@ -70,6 +95,22 @@ func intFromEnv(key string, fallback int) (int, error) {
 	}
 
 	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s: %w", key, err)
+	}
+	if parsed <= 0 {
+		return 0, fmt.Errorf("invalid %s: must be greater than 0", key)
+	}
+	return parsed, nil
+}
+
+func int64FromEnv(key string, fallback int64) (int64, error) {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback, nil
+	}
+
+	parsed, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
 		return 0, fmt.Errorf("invalid %s: %w", key, err)
 	}

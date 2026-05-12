@@ -4,101 +4,46 @@ This project exposes a Streamable HTTP MCP server at `/mcp`.
 
 ## Tools
 
-### `text_to_image`
+### `generate_docx`
 
-Generate one or more images from a text prompt.
+Generate a DOCX document from structured content blocks.
 
-Inputs:
+### `render_docx_template`
 
-- `prompt`
-- `size`
-- `response_format`
-- `seed`
-- `watermark`
-- `guidance_scale`
-- `num_images`
+Render a DOCX document from a template stored in `templates/`.
 
-### `image_to_image`
+### `list_docx_templates`
 
-Generate one or more edited images from a prompt and an input image.
+List available `.docx` templates from `templates/`.
 
-Inputs:
+## Local Verification
 
-- `prompt`
-- `image_url`
-- `image_base64`
-- `size`
-- `response_format`
-- `seed`
-- `watermark`
-- `strength`
-- `num_images`
-
-Both tools return:
-
-- `images`
-- `request_id`
-- `model`
-- `created_at`
-
-## Local verification
-
-Start the server and connect an MCP client to:
+Connect an MCP client to:
 
 ```text
-http://localhost:9101/mcp
+http://localhost:9103/mcp
 ```
 
-## JSON-RPC examples
-
-Initialize session:
+## JSON-RPC Example
 
 ```bash
-curl -X POST http://localhost:9101/mcp \
+curl -X POST http://localhost:9103/mcp \
   -H 'Content-Type: application/json' \
   -d '{
     "jsonrpc": "2.0",
     "id": 1,
-    "method": "initialize",
-    "params": {
-      "protocolVersion": "2025-03-26",
-      "capabilities": {},
-      "clientInfo": {
-        "name": "curl-client",
-        "version": "0.1.0"
-      }
-    }
-  }'
-```
-
-List tools:
-
-```bash
-curl -X POST http://localhost:9101/mcp \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "jsonrpc": "2.0",
-    "id": 2,
-    "method": "tools/list",
-    "params": {}
-  }'
-```
-
-Call `text_to_image`:
-
-```bash
-curl -X POST http://localhost:9101/mcp \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "jsonrpc": "2.0",
-    "id": 3,
     "method": "tools/call",
     "params": {
-      "name": "text_to_image",
+      "name": "generate_docx",
       "arguments": {
-        "prompt": "A cinematic cat astronaut on the moon",
-        "size": "2048x2048",
-        "response_format": "url"
+        "file_name": "demo.docx",
+        "footer_page_number": true,
+        "content": [
+          {"type": "heading", "text": "Demo", "level": 1},
+          {"type": "paragraph", "text": "Hello from MCP"},
+          {"type": "hyperlink", "url": "https://example.com", "display_text": "Example"},
+          {"type": "page_break"}
+        ]
       }
     }
   }'

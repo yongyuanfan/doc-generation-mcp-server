@@ -1,0 +1,139 @@
+package document
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/yong/doc-generation-mcp-server/internal/config"
+	"github.com/yong/doc-generation-mcp-server/internal/model"
+)
+
+type stubProvider struct{}
+
+func (stubProvider) Generate(_ context.Context, input model.GenerateDocumentRequest, outputName string) (model.DocumentResult, error) {
+	return model.DocumentResult{FileName: outputName, Path: outputName}, nil
+}
+
+func (stubProvider) RenderTemplate(_ context.Context, templatePath string, _ map[string]any, outputName string) (model.DocumentResult, error) {
+	return model.DocumentResult{FileName: outputName, Path: templatePath}, nil
+}
+
+func TestGenerateRejectsInvalidBlocks(t *testing.T) {
+	tempDir := t.TempDir()
+	service := NewService(testConfig(tempDir), stubProvider{})
+
+	_, err := service.Generate(context.Background(), model.GenerateDocumentRequest{
+		Content: []model.ContentBlock{{Type: "table", Rows: [][]string{{"a"}, {"a", "b"}}}},
+	})
+	if err == nil || !strings.Contains(err.Error(), "same column count") {
+		t.Fatalf("expected table validation error, got %v", err)
+	}
+}
+
+func TestGenerateRejectsHyperlinkWithoutURL(t *testing.T) {
+	tempDir := t.TempDir()
+	service := NewService(testConfig(tempDir), stubProvider{})
+
+	_, err := service.Generate(context.Background(), model.GenerateDocumentRequest{
+		Content: []model.ContentBlock{{Type: "hyperlink", DisplayText: "Open"}},
+	})
+	if err == nil || !strings.Contains(err.Error(), "url is required") {
+		t.Fatalf("expected hyperlink validation error, got %v", err)
+	}
+}
+
+func TestCapabilitiesIncludeExtendedBlocks(t *testing.T) {
+	service := NewService(testConfig(t.TempDir()), stubProvider{})
+	capabilities := service.Capabilities()
+	if !capabilities.FooterPageNumber {
+		t.Fatal("expected footer page number capability")
+	}
+	joined := strings.Join(capabilities.BlockTypes, ",")
+	for _, blockType := range []string{"page_break", "hyperlink"} {
+		if !strings.Contains(joined, blockType) {
+			t.Fatalf("expected block type %s in %v", blockType, capabilities.BlockTypes)
+		}
+	}
+}
+
+func TestRenderTemplateRejectsMissingTemplate(t *testing.T) {
+	tempDir := t.TempDir()
+	service := NewService(testConfig(tempDir), stubProvider{})
+
+	_, err := service.RenderTemplate(context.Background(), model.RenderTemplateRequest{
+		TemplateName: "missing.docx",
+	})
+	if err == nil || !strings.Contains(err.Error(), "template not found") {
+		t.Fatalf("expected missing template error, got %v", err)
+	}
+}
+
+func TestListTemplatesFiltersNonDocx(t *testing.T) {
+	tempDir := t.TempDir()
+	cfg := testConfig(tempDir)
+	service := NewService(cfg, stubProvider{})
+
+	if err := os.MkdirAll(cfg.DocxTemplateDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"a.docx", "b.txt", "c.DOCX"} {
+		if err := os.WriteFile(filepath.Join(cfg.DocxTemplateDir, name), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	result, err := service.ListTemplates()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Templates) != 2 {
+		t.Fatalf("expected 2 templates, got %d", len(result.Templates))
+	}
+}
+
+func TestDownloadPathRejectsInvalidName(t *testing.T) {
+	tempDir := t.TempDir()
+	service := NewService(testConfig(tempDir), stubProvider{})
+
+	_, err := service.DownloadPath("../secret.docx")
+	if err == nil || !strings.Contains(err.Error(), "invalid file name") {
+		t.Fatalf("expected invalid file name error, got %v", err)
+	}
+}
+
+func TestDownloadPathFindsExistingFile(t *testing.T) {
+	tempDir := t.TempDir()
+	cfg := testConfig(tempDir)
+	service := NewService(cfg, stubProvider{})
+
+	if err := os.MkdirAll(cfg.DocxTempDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	fullPath := filepath.Join(cfg.DocxTempDir, "ready.docx")
+	if err := os.WriteFile(fullPath, []byte("docx"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	path, err := service.DownloadPath("ready.docx")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if path != fullPath {
+		t.Fatalf("expected %s, got %s", fullPath, path)
+	}
+}
+
+func testConfig(root string) config.Config {
+	return config.Config{
+		APIPrefix:           "/api/v1",
+		DocxTempDir:         filepath.Join(root, "temp"),
+		DocxTemplateDir:     filepath.Join(root, "templates"),
+		DocxDefaultAuthor:   "tester",
+		DocxDefaultFont:     "Calibri",
+		DocxDefaultFontSize: 22,
+		DocxMaxFileAge:      0,
+	}
+}

@@ -1,8 +1,11 @@
-module github.com/yong/image-generation-mcp-server
+module github.com/yong/doc-generation-mcp-server
 
 go 1.25.0
 
-require github.com/modelcontextprotocol/go-sdk v1.6.0
+require (
+	github.com/mmonterroca/docxgo/v2 v2.4.0
+	github.com/modelcontextprotocol/go-sdk v1.6.0
+)
 
 require (
 	github.com/google/jsonschema-go v0.4.3 // indirect

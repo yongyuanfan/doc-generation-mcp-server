@@ -1,16 +1,18 @@
-# image-generation-mcp-server
+# doc-generation-mcp-server
 
-A Go MCP server and REST API for text-to-image and image-to-image generation using Doubao Seedream.
+A remote MCP and REST service for generating `.docx` files with `github.com/mmonterroca/docxgo/v2`.
 
 ## Features
 
-- MCP server built with `github.com/modelcontextprotocol/go-sdk`
-- Streamable HTTP transport for remote tool access
-- REST API for direct service integration
-- Doubao Seedream text-to-image support
-- Doubao Seedream image-to-image support
-- Docker deployment support
+- Streamable HTTP MCP server
+- REST API for structured DOCX generation
+- DOCX template rendering from `templates/`
+- Template listing via REST and MCP
+- Structured blocks: heading, paragraph, table, image, page break, hyperlink
+- Optional footer page numbers
+- Runtime temp-file storage with download endpoint
 - Eino integration example
+- Docker deployment support
 
 ## Quick Start
 
@@ -19,23 +21,21 @@ cp .env.example .env
 go run ./cmd/server
 ```
 
-The server automatically loads environment variables from the project root `.env` file.
-
 Default endpoints:
 
-- MCP: `http://localhost:9101/mcp`
-- API: `http://localhost:9101/api/v1`
-- Health: `http://localhost:9101/healthz`
+- MCP: `http://localhost:9103/mcp`
+- API: `http://localhost:9103/api/v1`
+- Health: `http://localhost:9103/healthz`
 
-## Docker
+## Templates
 
-```bash
-docker compose up --build
-```
+Template files must be placed in `templates/`.
 
-## Quick Verification
+An example template is generated as `templates/example-letter.docx`.
 
-Run the local smoke test after the server starts:
+## Smoke Test
+
+Start the server, then run:
 
 ```bash
 bash scripts/smoke_test.sh
@@ -45,19 +45,5 @@ bash scripts/smoke_test.sh
 
 - `docs/api.md`
 - `docs/mcp.md`
-- `docs/eino.md`
 - `docs/deploy.md`
-
-## Notes
-
-This project uses a thin Ark HTTP client so the MCP layer and REST layer share the same service contract.
-
-The exact upstream request schema for some Seedream image editing options can vary by model revision. The integration keeps the business interface stable and forwards image-edit specific options through the provider layer.
-
-Current default model ID:
-
-- `doubao-seedream-4-5-251128`
-
-Current default image size:
-
-- `2048x2048`
+- `docs/eino.md`

@@ -2,32 +2,37 @@
 
 set -euo pipefail
 
-BASE_URL="${BASE_URL:-http://localhost:9101}"
+BASE_URL="${BASE_URL:-http://localhost:9103}"
 
 printf 'Checking health endpoint...\n'
 curl --fail --silent --show-error "${BASE_URL}/healthz"
-printf '\n\nChecking model endpoint...\n'
-curl --fail --silent --show-error "${BASE_URL}/api/v1/models"
-printf '\n\nChecking text-to-image validation...\n'
-text_status="$(curl --silent --show-error --output /tmp/image_generation_text_validation.json --write-out '%{http_code}' \
-  -X POST "${BASE_URL}/api/v1/images/generations" \
+
+printf '\n\nChecking capabilities endpoint...\n'
+curl --fail --silent --show-error "${BASE_URL}/api/v1/capabilities"
+
+printf '\n\nChecking templates endpoint...\n'
+curl --fail --silent --show-error "${BASE_URL}/api/v1/templates"
+
+printf '\n\nChecking generate validation...\n'
+generate_status="$(curl --silent --show-error --output /tmp/doc_generation_validation.json --write-out '%{http_code}' \
+  -X POST "${BASE_URL}/api/v1/documents/generate" \
   -H 'Content-Type: application/json' \
   -d '{}')"
-if [[ "${text_status}" != "400" ]]; then
-  printf 'Unexpected status for text-to-image validation: %s\n' "${text_status}"
-  cat /tmp/image_generation_text_validation.json
-  exit 1
+if [[ "${generate_status}" != "400" ]]; then
+	printf 'Unexpected status for generate validation: %s\n' "${generate_status}"
+	exit 1
 fi
-cat /tmp/image_generation_text_validation.json
-printf '\n\nChecking image-to-image validation...\n'
-i2i_status="$(curl --silent --show-error --output /tmp/image_generation_i2i_validation.json --write-out '%{http_code}' \
-  -X POST "${BASE_URL}/api/v1/images/edits" \
+cat /tmp/doc_generation_validation.json
+
+printf '\n\nChecking template validation...\n'
+template_status="$(curl --silent --show-error --output /tmp/doc_template_validation.json --write-out '%{http_code}' \
+  -X POST "${BASE_URL}/api/v1/documents/render-template" \
   -H 'Content-Type: application/json' \
-  -d '{"prompt":"test"}')"
-if [[ "${i2i_status}" != "400" ]]; then
-  printf 'Unexpected status for image-to-image validation: %s\n' "${i2i_status}"
-  cat /tmp/image_generation_i2i_validation.json
-  exit 1
+  -d '{}')"
+if [[ "${template_status}" != "400" ]]; then
+	printf 'Unexpected status for template validation: %s\n' "${template_status}"
+	exit 1
 fi
-cat /tmp/image_generation_i2i_validation.json
+cat /tmp/doc_template_validation.json
+
 printf '\n\nSmoke test completed.\n'

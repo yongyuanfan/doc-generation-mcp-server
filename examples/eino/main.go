@@ -7,18 +7,14 @@ import (
 	"log"
 	"os"
 
-	arkmodel "github.com/cloudwego/eino-ext/components/model/ark"
 	mcptool "github.com/cloudwego/eino-ext/components/tool/mcp"
-	"github.com/cloudwego/eino/adk"
-	"github.com/cloudwego/eino/compose"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func main() {
 	ctx := context.Background()
-
 	transport := &mcp.StreamableClientTransport{
-		Endpoint: envOrDefault("MCP_SERVER_URL", "http://localhost:9101/mcp"),
+		Endpoint: envOrDefault("MCP_SERVER_URL", "http://localhost:9103/mcp"),
 	}
 
 	client := mcp.NewClient(&mcp.Implementation{Name: "eino-example-client", Version: "0.1.0"}, nil)
@@ -33,24 +29,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	chatModel, err := arkmodel.NewChatModel(ctx, &arkmodel.ChatModelConfig{
-		APIKey: os.Getenv("ARK_API_KEY"),
-		Model:  envOrDefault("ARK_CHAT_MODEL", "doubao-seed-1-6-flash-250715"),
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	_, err = adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
-		Model: chatModel,
-		ToolsConfig: adk.ToolsConfig{
-			ToolsNodeConfig: compose.ToolsNodeConfig{
-				Tools: tools,
-			},
-		},
-	})
-	if err != nil {
-		log.Fatal(err)
+	for _, tool := range tools {
+		log.Printf("discovered tool: %s", tool.Info(ctx).Name)
 	}
 }
 
