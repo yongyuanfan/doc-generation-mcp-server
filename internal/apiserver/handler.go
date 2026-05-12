@@ -7,6 +7,7 @@ import (
 
 	"github.com/yong/doc-generation-mcp-server/internal/common"
 	"github.com/yong/doc-generation-mcp-server/internal/config"
+	"github.com/yong/doc-generation-mcp-server/internal/formaldoc"
 	"github.com/yong/doc-generation-mcp-server/internal/model"
 	docsvc "github.com/yong/doc-generation-mcp-server/internal/service/document"
 )
@@ -20,6 +21,7 @@ func NewHandler(cfg config.Config, service *docsvc.Service) http.Handler {
 	h := &Handler{service: service, config: cfg}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/documents/generate", h.handleGenerate)
+	mux.HandleFunc("/documents/generate-from-draft", h.handleGenerateFromDraft)
 	mux.HandleFunc("/documents/render-template", h.handleRenderTemplate)
 	mux.HandleFunc("/documents/files/", h.handleDownload)
 	mux.HandleFunc("/templates", h.handleTemplates)
@@ -60,6 +62,24 @@ func (h *Handler) handleRenderTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	result, err := h.service.RenderTemplate(r.Context(), req)
+	if err != nil {
+		common.WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	common.WriteJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) handleGenerateFromDraft(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		common.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var req formaldoc.Draft
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		common.WriteError(w, http.StatusBadRequest, "invalid json body")
+		return
+	}
+	result, err := h.service.GenerateFromDraft(r.Context(), req)
 	if err != nil {
 		common.WriteError(w, http.StatusBadRequest, err.Error())
 		return

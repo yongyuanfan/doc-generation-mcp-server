@@ -6,9 +6,9 @@ A remote MCP and REST service for generating `.docx` files with `github.com/mmon
 
 - Streamable HTTP MCP server
 - REST API for structured DOCX generation
+- REST API for FormalDocumentDraftV1 based generation
 - DOCX template rendering from `templates/`
 - Template listing via REST and MCP
-- Structured blocks: heading, paragraph, table, image, page break, hyperlink
 - Structured blocks: heading, paragraph, table, image, page break, hyperlink, toc
 - Header text support
 - Optional footer page numbers
@@ -26,9 +26,9 @@ go run ./cmd/server
 
 Default endpoints:
 
-- MCP: `http://localhost:9103/mcp`
-- API: `http://localhost:9103/api/v1`
-- Health: `http://localhost:9103/healthz`
+- MCP: `http://localhost:9101/mcp`
+- API: `http://localhost:9101/api/v1`
+- Health: `http://localhost:9101/healthz`
 
 ## Templates
 
@@ -50,3 +50,13 @@ bash scripts/smoke_test.sh
 - `docs/mcp.md`
 - `docs/deploy.md`
 - `docs/eino.md`
+- `docs/formal-document-schema.md`
+- `docs/document-type-rules.md`
+- `docs/agent-workflow.md`
+- `docs/draft-to-docx-mapping.md`
+- `docs/formal-document-examples.md`
+
+## Internal Building Blocks
+
+- `schemas/formal-document-draft-v1.json`
+- `internal/formaldoc`

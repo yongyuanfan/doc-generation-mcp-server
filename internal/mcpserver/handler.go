@@ -6,6 +6,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/yong/doc-generation-mcp-server/internal/config"
+	"github.com/yong/doc-generation-mcp-server/internal/formaldoc"
 	"github.com/yong/doc-generation-mcp-server/internal/model"
 	docsvc "github.com/yong/doc-generation-mcp-server/internal/service/document"
 )
@@ -18,6 +19,14 @@ func NewHandler(cfg config.Config, service *docsvc.Service) http.Handler {
 		Description: "Generate a DOCX document from structured content blocks.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, input model.GenerateDocumentRequest) (*mcp.CallToolResult, model.DocumentResult, error) {
 		result, err := service.Generate(ctx, input)
+		return nil, result, err
+	})
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "generate_docx_from_draft",
+		Description: "Generate a DOCX document from a FormalDocumentDraftV1 payload.",
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, input formaldoc.Draft) (*mcp.CallToolResult, model.DraftDocumentResult, error) {
+		result, err := service.GenerateFromDraft(ctx, input)
 		return nil, result, err
 	})
 

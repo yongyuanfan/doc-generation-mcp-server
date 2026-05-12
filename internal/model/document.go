@@ -50,6 +50,16 @@ type DocumentResult struct {
 	SizeBytes   int64  `json:"size_bytes"`
 }
 
+type DraftDocumentResult struct {
+	FileName     string   `json:"file_name"`
+	Path         string   `json:"path"`
+	DownloadURL  string   `json:"download_url"`
+	MIMEType     string   `json:"mime_type"`
+	SizeBytes    int64    `json:"size_bytes"`
+	ReviewNotes  []string `json:"review_notes,omitempty"`
+	TemplateName string   `json:"template_name,omitempty"`
+}
+
 type ListTemplatesRequest struct{}
 
 type TemplateInfo struct {

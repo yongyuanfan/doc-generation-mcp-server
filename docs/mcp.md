@@ -8,6 +8,10 @@ This project exposes a Streamable HTTP MCP server at `/mcp`.
 
 Generate a DOCX document from structured content blocks.
 
+### `generate_docx_from_draft`
+
+Generate a DOCX document from a validated `FormalDocumentDraftV1` payload.
+
 ### `render_docx_template`
 
 Render a DOCX document from a template stored in `templates/`.

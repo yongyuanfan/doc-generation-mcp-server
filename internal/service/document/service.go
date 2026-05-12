@@ -7,8 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/yong/doc-generation-mcp-server/internal/config"
+	"github.com/yong/doc-generation-mcp-server/internal/formaldoc"
 	"github.com/yong/doc-generation-mcp-server/internal/model"
 )
 
@@ -64,6 +66,26 @@ func (s *Service) RenderTemplate(ctx context.Context, input model.RenderTemplate
 	}
 	result.DownloadURL = s.config.APIPrefix + "/documents/files/" + result.FileName
 	return result, nil
+}
+
+func (s *Service) GenerateFromDraft(ctx context.Context, draft formaldoc.Draft) (model.DraftDocumentResult, error) {
+	converted, err := formaldoc.ToGenerateRequest(draft)
+	if err != nil {
+		return model.DraftDocumentResult{}, err
+	}
+	result, err := s.Generate(ctx, converted.Request)
+	if err != nil {
+		return model.DraftDocumentResult{}, err
+	}
+	return model.DraftDocumentResult{
+		FileName:     result.FileName,
+		Path:         result.Path,
+		DownloadURL:  result.DownloadURL,
+		MIMEType:     result.MIMEType,
+		SizeBytes:    result.SizeBytes,
+		ReviewNotes:  converted.ReviewNotes,
+		TemplateName: converted.TemplateName,
+	}, nil
 }
 
 func (s *Service) Capabilities() model.CapabilitiesResponse {
@@ -265,11 +287,7 @@ func sanitizeFileName(value string) string {
 	var builder strings.Builder
 	for _, ch := range trimmed {
 		switch {
-		case ch >= 'a' && ch <= 'z':
-			builder.WriteRune(ch)
-		case ch >= 'A' && ch <= 'Z':
-			builder.WriteRune(ch)
-		case ch >= '0' && ch <= '9':
+		case unicode.IsLetter(ch), unicode.IsDigit(ch):
 			builder.WriteRune(ch)
 		case ch == '.', ch == '-', ch == '_':
 			builder.WriteRune(ch)

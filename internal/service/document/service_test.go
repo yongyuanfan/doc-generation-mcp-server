@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/yong/doc-generation-mcp-server/internal/config"
+	"github.com/yong/doc-generation-mcp-server/internal/formaldoc"
 	"github.com/yong/doc-generation-mcp-server/internal/model"
 )
 
@@ -138,6 +139,39 @@ func TestDownloadPathFindsExistingFile(t *testing.T) {
 	}
 	if path != fullPath {
 		t.Fatalf("expected %s, got %s", fullPath, path)
+	}
+}
+
+func TestGenerateFromDraftReturnsReviewNotes(t *testing.T) {
+	tempDir := t.TempDir()
+	service := NewService(testConfig(tempDir), stubProvider{})
+
+	result, err := service.GenerateFromDraft(context.Background(), formaldoc.Draft{
+		SchemaVersion:    formaldoc.SchemaVersion,
+		DocumentType:     formaldoc.DocumentTypeWeeklyReport,
+		Title:            "周报",
+		Audience:         "management",
+		Tone:             "formal",
+		Language:         "zh-CN",
+		FooterPageNumber: true,
+		Sections: []formaldoc.Section{
+			{Title: "一、本期工作概述", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "概述"}}},
+			{Title: "二、已完成事项", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "已完成"}}},
+			{Title: "三、当前进展", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "进展"}}},
+			{Title: "四、存在问题", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "问题"}}},
+			{Title: "五、下阶段计划", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "计划"}}},
+			{Title: "六、需协调事项", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "协调事项"}}},
+		},
+		ReviewNotes: []string{"资料待补充"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.ReviewNotes) != 1 || result.ReviewNotes[0] != "资料待补充" {
+		t.Fatalf("unexpected review notes: %#v", result.ReviewNotes)
+	}
+	if result.FileName == "" {
+		t.Fatal("expected generated file name")
 	}
 }
 
