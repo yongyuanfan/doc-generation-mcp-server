@@ -69,6 +69,30 @@ func (s *Service) RenderTemplate(ctx context.Context, input model.RenderTemplate
 }
 
 func (s *Service) GenerateFromDraft(ctx context.Context, draft formaldoc.Draft) (model.DraftDocumentResult, error) {
+	validation := s.ValidateDraft(draft)
+	if !validation.Valid {
+		return model.DraftDocumentResult{}, fmt.Errorf("%s", strings.Join(validation.Issues, "; "))
+	}
+	if strings.TrimSpace(draft.TemplateName) != "" {
+		templateRequest, err := formaldoc.ToTemplateRequest(draft)
+		if err != nil {
+			return model.DraftDocumentResult{}, err
+		}
+		result, err := s.RenderTemplate(ctx, templateRequest)
+		if err != nil {
+			return model.DraftDocumentResult{}, err
+		}
+		return model.DraftDocumentResult{
+			FileName:     result.FileName,
+			Path:         result.Path,
+			DownloadURL:  result.DownloadURL,
+			MIMEType:     result.MIMEType,
+			SizeBytes:    result.SizeBytes,
+			ReviewNotes:  validation.ReviewNotes,
+			TemplateName: draft.TemplateName,
+			Route:        formaldoc.RouteTemplate,
+		}, nil
+	}
 	converted, err := formaldoc.ToGenerateRequest(draft)
 	if err != nil {
 		return model.DraftDocumentResult{}, err
@@ -85,7 +109,26 @@ func (s *Service) GenerateFromDraft(ctx context.Context, draft formaldoc.Draft) 
 		SizeBytes:    result.SizeBytes,
 		ReviewNotes:  converted.ReviewNotes,
 		TemplateName: converted.TemplateName,
+		Route:        formaldoc.RouteStructured,
 	}, nil
+}
+
+func (s *Service) ValidateDraft(draft formaldoc.Draft) model.DraftValidationResult {
+	issues := formaldoc.ValidateDraft(draft)
+	result := model.DraftValidationResult{
+		Valid:               len(issues) == 0,
+		ReviewNotes:         append([]string(nil), draft.ReviewNotes...),
+		RecommendedRoute:    formaldoc.RecommendedRoute(draft),
+		RecommendedTemplate: formaldoc.RecommendedTemplate(draft),
+	}
+	if len(issues) == 0 {
+		return result
+	}
+	result.Issues = make([]string, 0, len(issues))
+	for _, issue := range issues {
+		result.Issues = append(result.Issues, issue.Error())
+	}
+	return result
 }
 
 func (s *Service) Capabilities() model.CapabilitiesResponse {

@@ -31,6 +31,15 @@ func NewHandler(cfg config.Config, service *docsvc.Service) http.Handler {
 	})
 
 	mcp.AddTool(server, &mcp.Tool{
+		Name:        "validate_formal_document_draft",
+		Description: "Validate a FormalDocumentDraftV1 payload without generating a DOCX file.",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input formaldoc.Draft) (*mcp.CallToolResult, model.DraftValidationResult, error) {
+		_ = ctx
+		_ = req
+		return nil, service.ValidateDraft(input), nil
+	})
+
+	mcp.AddTool(server, &mcp.Tool{
 		Name:        "render_docx_template",
 		Description: "Render a DOCX file from a template in the templates directory.",
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, input model.RenderTemplateRequest) (*mcp.CallToolResult, model.DocumentResult, error) {

@@ -173,6 +173,82 @@ func TestGenerateFromDraftReturnsReviewNotes(t *testing.T) {
 	if result.FileName == "" {
 		t.Fatal("expected generated file name")
 	}
+	if result.Route != "structured" {
+		t.Fatalf("expected structured route, got %s", result.Route)
+	}
+}
+
+func TestValidateDraftReturnsIssues(t *testing.T) {
+	service := NewService(testConfig(t.TempDir()), stubProvider{})
+	result := service.ValidateDraft(formaldoc.Draft{})
+	if result.Valid {
+		t.Fatal("expected invalid result")
+	}
+	if len(result.Issues) == 0 {
+		t.Fatal("expected validation issues")
+	}
+}
+
+func TestValidateDraftReturnsRecommendations(t *testing.T) {
+	service := NewService(testConfig(t.TempDir()), stubProvider{})
+	result := service.ValidateDraft(formaldoc.Draft{
+		SchemaVersion: formaldoc.SchemaVersion,
+		DocumentType:  formaldoc.DocumentTypeBusinessLetter,
+		Title:         "说明函",
+		Audience:      "customer",
+		Tone:          "formal",
+		Language:      "zh-CN",
+		Sections: []formaldoc.Section{
+			{Title: "一、发函背景", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "背景"}}},
+			{Title: "二、发函事项", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "事项"}}},
+			{Title: "三、具体说明", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "说明"}}},
+			{Title: "四、后续安排", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "安排"}}},
+		},
+	})
+	if result.RecommendedRoute != formaldoc.RouteTemplate {
+		t.Fatalf("expected template recommendation, got %s", result.RecommendedRoute)
+	}
+	if result.RecommendedTemplate != "business-letter.docx" {
+		t.Fatalf("unexpected template recommendation: %s", result.RecommendedTemplate)
+	}
+}
+
+func TestGenerateFromDraftUsesTemplateRoute(t *testing.T) {
+	tempDir := t.TempDir()
+	cfg := testConfig(tempDir)
+	service := NewService(cfg, stubProvider{})
+	if err := os.MkdirAll(cfg.DocxTemplateDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(cfg.DocxTemplateDir, "business-letter.docx"), []byte("template"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := service.GenerateFromDraft(context.Background(), formaldoc.Draft{
+		SchemaVersion: formaldoc.SchemaVersion,
+		DocumentType:  formaldoc.DocumentTypeBusinessLetter,
+		Title:         "说明函",
+		Audience:      "customer",
+		Tone:          "formal",
+		Language:      "zh-CN",
+		TemplateName:  "business-letter.docx",
+		Sections: []formaldoc.Section{
+			{Title: "一、发函背景", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "背景"}}},
+			{Title: "二、发函事项", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "事项"}}},
+			{Title: "三、具体说明", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "说明"}}},
+			{Title: "四、后续安排", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "安排"}}},
+		},
+		Placeholders: map[string]string{"recipient_name": "张三"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Route != "template" {
+		t.Fatalf("expected template route, got %s", result.Route)
+	}
+	if result.TemplateName != "business-letter.docx" {
+		t.Fatalf("unexpected template name: %s", result.TemplateName)
+	}
 }
 
 func testConfig(root string) config.Config {

@@ -8,6 +8,8 @@ const (
 	DocumentTypeProjectProposal = "project_proposal"
 	DocumentTypeWeeklyReport    = "weekly_report"
 	DocumentTypeBusinessLetter  = "business_letter"
+	RouteStructured             = "structured"
+	RouteTemplate               = "template"
 )
 
 type Draft struct {

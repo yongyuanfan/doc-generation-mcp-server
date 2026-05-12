@@ -22,6 +22,14 @@
 
 This endpoint accepts a `FormalDocumentDraftV1` payload, validates it, converts it to the internal document request format, and renders a `.docx` file.
 
+If `template_name` is provided, the service will automatically prefer template rendering.
+
+## Validate Draft
+
+`POST /api/v1/documents/validate-draft`
+
+This endpoint validates a `FormalDocumentDraftV1` payload without generating a document.
+
 Example:
 
 ```bash

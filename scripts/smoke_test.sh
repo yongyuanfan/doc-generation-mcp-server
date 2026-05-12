@@ -51,4 +51,25 @@ curl --fail --silent --show-error -X POST "${BASE_URL}/api/v1/documents/generate
     ]
   }'
 
+printf '\n\nChecking draft validation...\n'
+curl --fail --silent --show-error -X POST "${BASE_URL}/api/v1/documents/validate-draft" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "schema_version": "1.0",
+    "document_type": "weekly_report",
+    "title": "研发中心第20周工作周报",
+    "audience": "management",
+    "tone": "formal",
+    "language": "zh-CN",
+    "footer_page_number": true,
+    "sections": [
+      {"title": "一、本期工作概述", "level": 1, "blocks": [{"type": "paragraph", "text": "本期围绕智能文档平台推进。"}]},
+      {"title": "二、已完成事项", "level": 1, "blocks": [{"type": "paragraph", "text": "已完成核心接口改造。"}]},
+      {"title": "三、当前进展", "level": 1, "blocks": [{"type": "paragraph", "text": "正在补充规则校验器。"}]},
+      {"title": "四、存在问题", "level": 1, "blocks": [{"type": "paragraph", "text": "模板库仍需补充。"}]},
+      {"title": "五、下阶段计划", "level": 1, "blocks": [{"type": "paragraph", "text": "继续扩展标准文档类型。"}]},
+      {"title": "六、需协调事项", "level": 1, "blocks": [{"type": "paragraph", "text": "需协调模板规范。"}]}
+    ]
+  }'
+
 printf '\n\nSmoke test completed.\n'

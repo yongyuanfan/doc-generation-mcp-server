@@ -65,6 +65,31 @@ func ToGenerateRequest(d Draft) (ConversionResult, error) {
 	}, nil
 }
 
+func ToTemplateRequest(d Draft) (model.RenderTemplateRequest, error) {
+	if issues := ValidateDraft(d); len(issues) > 0 {
+		return model.RenderTemplateRequest{}, issues[0]
+	}
+	if strings.TrimSpace(d.TemplateName) == "" {
+		return model.RenderTemplateRequest{}, ValidationIssue{Field: "template_name", Message: "is required for template routing"}
+	}
+	data := make(map[string]any, len(d.Placeholders)+7)
+	for key, value := range d.Placeholders {
+		data[key] = value
+	}
+	data["title"] = d.Title
+	data["subtitle"] = d.Subtitle
+	data["author"] = d.Author
+	data["organization"] = d.Organization
+	data["summary"] = d.Summary
+	data["header_text"] = d.HeaderText
+	data["footer_page_number"] = d.FooterPageNumber
+	return model.RenderTemplateRequest{
+		TemplateName: d.TemplateName,
+		FileName:     defaultFileNameFromTitle(d.Title),
+		Data:         data,
+	}, nil
+}
+
 func convertBlocks(blocks []Block) []model.ContentBlock {
 	converted := make([]model.ContentBlock, 0, len(blocks))
 	for _, block := range blocks {

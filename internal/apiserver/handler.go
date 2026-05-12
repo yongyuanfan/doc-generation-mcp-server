@@ -22,6 +22,7 @@ func NewHandler(cfg config.Config, service *docsvc.Service) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/documents/generate", h.handleGenerate)
 	mux.HandleFunc("/documents/generate-from-draft", h.handleGenerateFromDraft)
+	mux.HandleFunc("/documents/validate-draft", h.handleValidateDraft)
 	mux.HandleFunc("/documents/render-template", h.handleRenderTemplate)
 	mux.HandleFunc("/documents/files/", h.handleDownload)
 	mux.HandleFunc("/templates", h.handleTemplates)
@@ -85,6 +86,19 @@ func (h *Handler) handleGenerateFromDraft(w http.ResponseWriter, r *http.Request
 		return
 	}
 	common.WriteJSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) handleValidateDraft(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		common.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var req formaldoc.Draft
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		common.WriteError(w, http.StatusBadRequest, "invalid json body")
+		return
+	}
+	common.WriteJSON(w, http.StatusOK, h.service.ValidateDraft(req))
 }
 
 func (h *Handler) handleDownload(w http.ResponseWriter, r *http.Request) {

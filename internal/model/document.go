@@ -58,6 +58,15 @@ type DraftDocumentResult struct {
 	SizeBytes    int64    `json:"size_bytes"`
 	ReviewNotes  []string `json:"review_notes,omitempty"`
 	TemplateName string   `json:"template_name,omitempty"`
+	Route        string   `json:"route,omitempty"`
+}
+
+type DraftValidationResult struct {
+	Valid               bool     `json:"valid"`
+	Issues              []string `json:"issues,omitempty"`
+	ReviewNotes         []string `json:"review_notes,omitempty"`
+	RecommendedRoute    string   `json:"recommended_route,omitempty"`
+	RecommendedTemplate string   `json:"recommended_template,omitempty"`
 }
 
 type ListTemplatesRequest struct{}

@@ -55,6 +55,7 @@ bash scripts/smoke_test.sh
 - `docs/agent-workflow.md`
 - `docs/draft-to-docx-mapping.md`
 - `docs/formal-document-examples.md`
+- `docs/llm-integration-example.md`
 
 ## Internal Building Blocks
 

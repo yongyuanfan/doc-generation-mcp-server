@@ -12,6 +12,12 @@ Generate a DOCX document from structured content blocks.
 
 Generate a DOCX document from a validated `FormalDocumentDraftV1` payload.
 
+If `template_name` is present, the service will automatically use template routing.
+
+### `validate_formal_document_draft`
+
+Validate a `FormalDocumentDraftV1` payload without generating a DOCX file.
+
 ### `render_docx_template`
 
 Render a DOCX document from a template stored in `templates/`.
