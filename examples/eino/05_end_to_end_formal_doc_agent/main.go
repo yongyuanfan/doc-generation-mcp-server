@@ -37,8 +37,19 @@ func main() {
 		},
 	}
 
-	draft := buildDraftFromInput(input)
-	shared.PrintJSON("mock_llm_draft", mustDraftJSON(draft))
+	llmConfig := shared.LoadLLMConfig()
+	var draft formaldoc.Draft
+	if llmConfig.Mode == "openai" {
+		var raw string
+		draft, raw, err = shared.BuildDraftWithLLM(ctx, llmConfig, input)
+		if err != nil {
+			log.Fatal(err)
+		}
+		shared.PrintJSON("openai_draft_json", raw)
+	} else {
+		draft = buildDraftFromInput(input)
+		shared.PrintJSON("mock_llm_draft", mustDraftJSON(draft))
+	}
 
 	validation, err := client.CallToolJSON(ctx, "validate_formal_document_draft", draft)
 	if err != nil {

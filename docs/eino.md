@@ -72,6 +72,13 @@ Demonstrates a complete high-level flow:
 3. generate document
 4. print result metadata and download URL
 
+This example also supports a real OpenAI-compatible model through:
+
+- `LLM_MODE=openai`
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL`
+- `OPENAI_BASE_URL`
+
 ## Notes
 
 - Each example `main.go` uses `//go:build ignore`

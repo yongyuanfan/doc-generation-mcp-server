@@ -24,6 +24,26 @@ go run ./cmd/server
 MCP_SERVER_URL=http://localhost:9103/mcp go run ./examples/eino/05_end_to_end_formal_doc_agent
 ```
 
+## Real LLM Mode
+
+The example supports two modes:
+
+1. `mock`
+2. `openai`
+
+Default mode is `mock`.
+
+To run with a real OpenAI-compatible model:
+
+```bash
+LLM_MODE=openai \
+OPENAI_API_KEY=your_api_key \
+OPENAI_MODEL=gpt-4o-mini \
+OPENAI_BASE_URL=https://api.openai.com/v1 \
+MCP_SERVER_URL=http://localhost:9103/mcp \
+go run ./examples/eino/05_end_to_end_formal_doc_agent
+```
+
 ## Expected Output
 
 The example prints:
