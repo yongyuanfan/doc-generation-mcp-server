@@ -72,6 +72,11 @@ Demonstrates a complete high-level flow:
 3. generate document
 4. print result metadata and download URL
 
+It also supports:
+
+- `-document-type weekly_report|business_letter`
+- `-input path/to/input.json`
+
 This example also supports a real OpenAI-compatible model through:
 
 - `LLM_MODE=openai`

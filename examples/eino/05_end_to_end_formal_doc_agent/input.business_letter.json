@@ -1,0 +1,10 @@
+{
+  "document_type": "business_letter",
+  "goal": "向客户发送正式沟通说明函",
+  "audience": "customer",
+  "facts": [
+    "建议双方安排专项沟通会议",
+    "会议议题包括需求确认、排期安排与责任分工",
+    "请于收到本函后确认可行时间"
+  ]
+}
