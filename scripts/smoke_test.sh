@@ -35,4 +35,20 @@ if [[ "${template_status}" != "400" ]]; then
 fi
 cat /tmp/doc_template_validation.json
 
+printf '\n\nChecking advanced generation...\n'
+curl --fail --silent --show-error -X POST "${BASE_URL}/api/v1/documents/generate" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "file_name": "smoke-advanced.docx",
+    "header_text": "Smoke Header",
+    "footer_page_number": true,
+    "content": [
+      {"type": "toc", "text": "Contents", "levels": "1-2"},
+      {"type": "heading", "text": "Smoke", "level": 1},
+      {"type": "paragraph", "text": "Advanced generation works."},
+      {"type": "hyperlink", "url": "https://example.com", "display_text": "Example"},
+      {"type": "page_break"}
+    ]
+  }'
+
 printf '\n\nSmoke test completed.\n'

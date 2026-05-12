@@ -69,10 +69,11 @@ func (s *Service) RenderTemplate(ctx context.Context, input model.RenderTemplate
 func (s *Service) Capabilities() model.CapabilitiesResponse {
 	return model.CapabilitiesResponse{
 		Formats:          []string{"docx"},
-		BlockTypes:       []string{"heading", "paragraph", "table", "image", "page_break", "hyperlink"},
+		BlockTypes:       []string{"heading", "paragraph", "table", "image", "page_break", "hyperlink", "toc"},
 		TemplateDir:      s.config.DocxTemplateDir,
 		TempDir:          s.config.DocxTempDir,
 		TemplateRender:   true,
+		HeaderText:       true,
 		FooterPageNumber: true,
 	}
 }
@@ -163,11 +164,15 @@ func (s *Service) normalizeGenerateRequest(input model.GenerateDocumentRequest) 
 	if input.Author == "" {
 		input.Author = s.config.DocxDefaultAuthor
 	}
+	input.HeaderText = strings.TrimSpace(input.HeaderText)
 	input.Subject = strings.TrimSpace(input.Subject)
 	for index := range input.Content {
 		input.Content[index].Type = strings.ToLower(strings.TrimSpace(input.Content[index].Type))
 		input.Content[index].Text = strings.TrimSpace(input.Content[index].Text)
 		input.Content[index].Alignment = strings.ToLower(strings.TrimSpace(input.Content[index].Alignment))
+		input.Content[index].URL = strings.TrimSpace(input.Content[index].URL)
+		input.Content[index].DisplayText = strings.TrimSpace(input.Content[index].DisplayText)
+		input.Content[index].Levels = strings.TrimSpace(input.Content[index].Levels)
 	}
 	return input
 }
@@ -209,8 +214,8 @@ func validateGenerateRequest(input model.GenerateDocumentRequest) error {
 				}
 			}
 		case "image":
-			if strings.TrimSpace(block.ImageBase64) == "" {
-				return fmt.Errorf("image_base64 is required")
+			if strings.TrimSpace(block.ImageBase64) == "" && strings.TrimSpace(block.URL) == "" {
+				return fmt.Errorf("image_base64 or url is required")
 			}
 		case "page_break":
 		case "hyperlink":
@@ -220,6 +225,7 @@ func validateGenerateRequest(input model.GenerateDocumentRequest) error {
 			if strings.TrimSpace(block.DisplayText) == "" && strings.TrimSpace(block.Text) == "" {
 				return fmt.Errorf("display_text or text is required")
 			}
+		case "toc":
 		default:
 			return fmt.Errorf("unsupported block type: %s", block.Type)
 		}

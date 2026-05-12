@@ -9,7 +9,10 @@ A remote MCP and REST service for generating `.docx` files with `github.com/mmon
 - DOCX template rendering from `templates/`
 - Template listing via REST and MCP
 - Structured blocks: heading, paragraph, table, image, page break, hyperlink
+- Structured blocks: heading, paragraph, table, image, page break, hyperlink, toc
+- Header text support
 - Optional footer page numbers
+- Image embedding from base64 or URL
 - Runtime temp-file storage with download endpoint
 - Eino integration example
 - Docker deployment support

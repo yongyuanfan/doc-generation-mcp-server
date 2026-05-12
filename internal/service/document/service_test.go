@@ -45,14 +45,29 @@ func TestGenerateRejectsHyperlinkWithoutURL(t *testing.T) {
 	}
 }
 
+func TestGenerateRejectsImageWithoutSource(t *testing.T) {
+	tempDir := t.TempDir()
+	service := NewService(testConfig(tempDir), stubProvider{})
+
+	_, err := service.Generate(context.Background(), model.GenerateDocumentRequest{
+		Content: []model.ContentBlock{{Type: "image"}},
+	})
+	if err == nil || !strings.Contains(err.Error(), "image_base64 or url is required") {
+		t.Fatalf("expected image source validation error, got %v", err)
+	}
+}
+
 func TestCapabilitiesIncludeExtendedBlocks(t *testing.T) {
 	service := NewService(testConfig(t.TempDir()), stubProvider{})
 	capabilities := service.Capabilities()
 	if !capabilities.FooterPageNumber {
 		t.Fatal("expected footer page number capability")
 	}
+	if !capabilities.HeaderText {
+		t.Fatal("expected header text capability")
+	}
 	joined := strings.Join(capabilities.BlockTypes, ",")
-	for _, blockType := range []string{"page_break", "hyperlink"} {
+	for _, blockType := range []string{"page_break", "hyperlink", "toc"} {
 		if !strings.Contains(joined, blockType) {
 			t.Fatalf("expected block type %s in %v", blockType, capabilities.BlockTypes)
 		}

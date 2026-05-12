@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,6 +33,11 @@ func (c *Client) Generate(_ context.Context, input model.GenerateDocumentRequest
 
 	if err := c.applyMetadata(document, input); err != nil {
 		return model.DocumentResult{}, err
+	}
+	if strings.TrimSpace(input.HeaderText) != "" {
+		if err := c.addHeaderText(document, input.HeaderText); err != nil {
+			return model.DocumentResult{}, err
+		}
 	}
 	if input.FooterPageNumber {
 		if err := c.addFooterPageNumbers(document); err != nil {
@@ -96,6 +103,8 @@ func (c *Client) addBlock(document domain.Document, block model.ContentBlock) er
 		return document.AddPageBreak()
 	case "hyperlink":
 		return c.addHyperlink(document, block)
+	case "toc":
+		return c.addTOC(document, block)
 	default:
 		return fmt.Errorf("unsupported block type: %s", block.Type)
 	}
@@ -184,7 +193,7 @@ func (c *Client) addTable(document domain.Document, block model.ContentBlock) er
 }
 
 func (c *Client) addImage(document domain.Document, block model.ContentBlock) error {
-	data, format, err := decodeImage(block.ImageBase64)
+	data, format, err := c.resolveImage(block)
 	if err != nil {
 		return err
 	}
@@ -214,6 +223,64 @@ func (c *Client) addHyperlink(document domain.Document, block model.ContentBlock
 	}
 	_, err = paragraph.AddHyperlink(strings.TrimSpace(block.URL), displayText)
 	return err
+}
+
+func (c *Client) addTOC(document domain.Document, block model.ContentBlock) error {
+	if strings.TrimSpace(block.Text) != "" {
+		heading, err := document.AddParagraph()
+		if err != nil {
+			return err
+		}
+		if err := heading.SetStyle("Heading1"); err != nil {
+			return err
+		}
+		run, err := heading.AddRun()
+		if err != nil {
+			return err
+		}
+		if err := run.SetText(block.Text); err != nil {
+			return err
+		}
+	}
+	paragraph, err := document.AddParagraph()
+	if err != nil {
+		return err
+	}
+	run, err := paragraph.AddRun()
+	if err != nil {
+		return err
+	}
+	levels := strings.TrimSpace(block.Levels)
+	if levels == "" {
+		levels = "1-3"
+	}
+	return run.AddField(docx.NewTOCField(map[string]string{
+		"levels":     levels,
+		"hyperlinks": "true",
+	}))
+}
+
+func (c *Client) addHeaderText(document domain.Document, value string) error {
+	section, err := document.DefaultSection()
+	if err != nil {
+		return err
+	}
+	header, err := section.Header(domain.HeaderDefault)
+	if err != nil {
+		return err
+	}
+	paragraph, err := header.AddParagraph()
+	if err != nil {
+		return err
+	}
+	if err := paragraph.SetAlignment(domain.AlignmentCenter); err != nil {
+		return err
+	}
+	run, err := paragraph.AddRun()
+	if err != nil {
+		return err
+	}
+	return run.SetText(strings.TrimSpace(value))
 }
 
 func (c *Client) addFooterPageNumbers(document domain.Document) error {
@@ -258,6 +325,33 @@ func (c *Client) addFooterPageNumbers(document domain.Document) error {
 		return err
 	}
 	return pageCountRun.AddField(docx.NewPageCountField())
+}
+
+func (c *Client) resolveImage(block model.ContentBlock) ([]byte, domain.ImageFormat, error) {
+	if strings.TrimSpace(block.ImageBase64) != "" {
+		return decodeImage(block.ImageBase64)
+	}
+	if strings.TrimSpace(block.URL) == "" {
+		return nil, "", fmt.Errorf("image_base64 or url is required")
+	}
+	return c.fetchImage(strings.TrimSpace(block.URL))
+}
+
+func (c *Client) fetchImage(url string) ([]byte, domain.ImageFormat, error) {
+	client := &http.Client{Timeout: c.config.RequestTimeout}
+	resp, err := client.Get(url)
+	if err != nil {
+		return nil, "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		return nil, "", fmt.Errorf("fetch image url: status %d", resp.StatusCode)
+	}
+	data, err := io.ReadAll(io.LimitReader(resp.Body, c.config.DocxMaxRequestBodyBytes))
+	if err != nil {
+		return nil, "", err
+	}
+	return data, imageFormatFromContentType(resp.Header.Get("Content-Type")), nil
 }
 
 func (c *Client) saveDocument(document domain.Document, outputName string) (model.DocumentResult, error) {
@@ -424,6 +518,25 @@ func imageFormatFromDataURL(prefix string) domain.ImageFormat {
 		return domain.ImageFormatWEBP
 	case strings.Contains(prefix, "image/svg+xml"):
 		return domain.ImageFormatSVG
+	default:
+		return domain.ImageFormatPNG
+	}
+}
+
+func imageFormatFromContentType(contentType string) domain.ImageFormat {
+	switch {
+	case strings.Contains(contentType, "image/jpeg"):
+		return domain.ImageFormatJPEG
+	case strings.Contains(contentType, "image/gif"):
+		return domain.ImageFormatGIF
+	case strings.Contains(contentType, "image/webp"):
+		return domain.ImageFormatWEBP
+	case strings.Contains(contentType, "image/svg+xml"):
+		return domain.ImageFormatSVG
+	case strings.Contains(contentType, "image/bmp"):
+		return domain.ImageFormatBMP
+	case strings.Contains(contentType, "image/tiff"):
+		return domain.ImageFormatTIFF
 	default:
 		return domain.ImageFormatPNG
 	}

@@ -6,6 +6,7 @@ type GenerateDocumentRequest struct {
 	Author           string         `json:"author,omitempty"`
 	Subject          string         `json:"subject,omitempty"`
 	Keywords         []string       `json:"keywords,omitempty"`
+	HeaderText       string         `json:"header_text,omitempty"`
 	FooterPageNumber bool           `json:"footer_page_number,omitempty"`
 	Content          []ContentBlock `json:"content"`
 }
@@ -28,6 +29,7 @@ type ContentBlock struct {
 	Height      int            `json:"height,omitempty"`
 	URL         string         `json:"url,omitempty"`
 	DisplayText string         `json:"display_text,omitempty"`
+	Levels      string         `json:"levels,omitempty"`
 }
 
 type ParagraphRun struct {
@@ -65,5 +67,6 @@ type CapabilitiesResponse struct {
 	TemplateDir      string   `json:"template_dir"`
 	TempDir          string   `json:"temp_dir"`
 	TemplateRender   bool     `json:"template_render"`
+	HeaderText       bool     `json:"header_text"`
 	FooterPageNumber bool     `json:"footer_page_number"`
 }

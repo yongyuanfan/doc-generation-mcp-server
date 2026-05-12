@@ -37,8 +37,10 @@ curl -X POST http://localhost:9103/mcp \
       "name": "generate_docx",
       "arguments": {
         "file_name": "demo.docx",
+        "header_text": "Demo Header",
         "footer_page_number": true,
         "content": [
+          {"type": "toc", "text": "Contents", "levels": "1-2"},
           {"type": "heading", "text": "Demo", "level": 1},
           {"type": "paragraph", "text": "Hello from MCP"},
           {"type": "hyperlink", "url": "https://example.com", "display_text": "Example"},
