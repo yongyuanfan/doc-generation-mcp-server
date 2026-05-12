@@ -86,6 +86,11 @@ Run validations in this order:
 2. Document-type validation from `document-type-rules.md`
 3. Formal-style validation
 
+The validation result may also provide:
+
+- `recommended_route`
+- `recommended_template`
+
 If validation fails:
 
 - regenerate the draft
@@ -107,6 +112,8 @@ Use when:
 - the document structure is highly standardized
 - the document type is `business_letter`
 - a matching template already exists
+
+The service can return a recommended template name before rendering.
 
 MCP tools:
 

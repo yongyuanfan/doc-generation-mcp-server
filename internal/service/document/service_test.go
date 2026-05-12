@@ -213,6 +213,29 @@ func TestValidateDraftReturnsRecommendations(t *testing.T) {
 	}
 }
 
+func TestValidateDraftUsesConfiguredTemplateMapping(t *testing.T) {
+	cfg := testConfig(t.TempDir())
+	cfg.DocumentTypeTemplateMap = map[string]string{"business_letter": "custom-letter.docx"}
+	service := NewService(cfg, stubProvider{})
+	result := service.ValidateDraft(formaldoc.Draft{
+		SchemaVersion: formaldoc.SchemaVersion,
+		DocumentType:  formaldoc.DocumentTypeBusinessLetter,
+		Title:         "说明函",
+		Audience:      "customer",
+		Tone:          "formal",
+		Language:      "zh-CN",
+		Sections: []formaldoc.Section{
+			{Title: "一、发函背景", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "背景"}}},
+			{Title: "二、发函事项", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "事项"}}},
+			{Title: "三、具体说明", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "说明"}}},
+			{Title: "四、后续安排", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "安排"}}},
+		},
+	})
+	if result.RecommendedTemplate != "custom-letter.docx" {
+		t.Fatalf("unexpected template recommendation: %s", result.RecommendedTemplate)
+	}
+}
+
 func TestGenerateFromDraftUsesTemplateRoute(t *testing.T) {
 	tempDir := t.TempDir()
 	cfg := testConfig(tempDir)
@@ -260,5 +283,8 @@ func testConfig(root string) config.Config {
 		DocxDefaultFont:     "Calibri",
 		DocxDefaultFontSize: 22,
 		DocxMaxFileAge:      0,
+		DocumentTypeTemplateMap: map[string]string{
+			"business_letter": "business-letter.docx",
+		},
 	}
 }

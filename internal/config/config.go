@@ -24,6 +24,7 @@ type Config struct {
 	DocxDefaultFontSize     int
 	DocxMaxRequestBodyBytes int64
 	DocxMaxFileAge          time.Duration
+	DocumentTypeTemplateMap map[string]string
 }
 
 func Load() (Config, error) {
@@ -75,9 +76,33 @@ func Load() (Config, error) {
 		DocxDefaultFontSize:     fontSize,
 		DocxMaxRequestBodyBytes: maxRequestBytes,
 		DocxMaxFileAge:          time.Duration(maxFileAgeMinutes) * time.Minute,
+		DocumentTypeTemplateMap: documentTypeTemplateMapFromEnv(),
 	}
 
 	return cfg, nil
+}
+
+func documentTypeTemplateMapFromEnv() map[string]string {
+	mapping := map[string]string{
+		"business_letter": "business-letter.docx",
+	}
+	raw := strings.TrimSpace(os.Getenv("DOCX_DOCUMENT_TYPE_TEMPLATES"))
+	if raw == "" {
+		return mapping
+	}
+	for _, item := range strings.Split(raw, ",") {
+		key, value, ok := strings.Cut(strings.TrimSpace(item), "=")
+		if !ok {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+		if key == "" || value == "" {
+			continue
+		}
+		mapping[key] = value
+	}
+	return mapping
 }
 
 func envOrDefault(key, fallback string) string {

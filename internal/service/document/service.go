@@ -74,6 +74,14 @@ func (s *Service) GenerateFromDraft(ctx context.Context, draft formaldoc.Draft) 
 		return model.DraftDocumentResult{}, fmt.Errorf("%s", strings.Join(validation.Issues, "; "))
 	}
 	if strings.TrimSpace(draft.TemplateName) != "" {
+		if draft.TemplateName == "" {
+			draft.TemplateName = formaldoc.RecommendedTemplate(draft, s.config.DocumentTypeTemplateMap)
+		}
+	}
+	if strings.TrimSpace(draft.TemplateName) == "" {
+		draft.TemplateName = formaldoc.RecommendedTemplate(draft, s.config.DocumentTypeTemplateMap)
+	}
+	if strings.TrimSpace(draft.TemplateName) != "" && formaldoc.RecommendedRoute(draft, s.config.DocumentTypeTemplateMap) == formaldoc.RouteTemplate {
 		templateRequest, err := formaldoc.ToTemplateRequest(draft)
 		if err != nil {
 			return model.DraftDocumentResult{}, err
@@ -118,8 +126,8 @@ func (s *Service) ValidateDraft(draft formaldoc.Draft) model.DraftValidationResu
 	result := model.DraftValidationResult{
 		Valid:               len(issues) == 0,
 		ReviewNotes:         append([]string(nil), draft.ReviewNotes...),
-		RecommendedRoute:    formaldoc.RecommendedRoute(draft),
-		RecommendedTemplate: formaldoc.RecommendedTemplate(draft),
+		RecommendedRoute:    formaldoc.RecommendedRoute(draft, s.config.DocumentTypeTemplateMap),
+		RecommendedTemplate: formaldoc.RecommendedTemplate(draft, s.config.DocumentTypeTemplateMap),
 	}
 	if len(issues) == 0 {
 		return result
