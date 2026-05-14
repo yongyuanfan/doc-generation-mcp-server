@@ -95,6 +95,29 @@ func TestToGenerateRequestBuildsExpectedBlocks(t *testing.T) {
 	}
 }
 
+func TestToTemplateRequestFillsCommonBusinessLetterPlaceholders(t *testing.T) {
+	request, err := ToTemplateRequest(validBusinessLetterDraft(func(d *Draft) {
+		d.TemplateName = "business-letter.docx"
+		d.Organization = "某某科技有限公司"
+		d.Summary = "关于工厂停产安排的通知"
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := request.Data["organization"]; got != "某某科技有限公司" {
+		t.Fatalf("unexpected organization: %v", got)
+	}
+	if got := request.Data["sender_name"]; got != "某某科技有限公司" {
+		t.Fatalf("unexpected sender_name: %v", got)
+	}
+	if got := request.Data["summary"]; got != "关于工厂停产安排的通知" {
+		t.Fatalf("unexpected summary: %v", got)
+	}
+	if got := request.Data["title"]; got != "说明函" {
+		t.Fatalf("unexpected title: %v", got)
+	}
+}
+
 func validProjectProposalDraft() Draft {
 	return Draft{
 		SchemaVersion:    SchemaVersion,

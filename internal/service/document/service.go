@@ -83,11 +83,6 @@ func (s *Service) GenerateFromDraft(ctx context.Context, draft formaldoc.Draft) 
 	if !validation.Valid {
 		return model.DraftDocumentResult{}, fmt.Errorf("%s", strings.Join(validation.Issues, "; "))
 	}
-	if strings.TrimSpace(draft.TemplateName) != "" {
-		if draft.TemplateName == "" {
-			draft.TemplateName = formaldoc.RecommendedTemplate(draft, s.config.DocumentTypeTemplateMap)
-		}
-	}
 	if strings.TrimSpace(draft.TemplateName) == "" {
 		draft.TemplateName = formaldoc.RecommendedTemplate(draft, s.config.DocumentTypeTemplateMap)
 	}
@@ -97,23 +92,28 @@ func (s *Service) GenerateFromDraft(ctx context.Context, draft formaldoc.Draft) 
 			return model.DraftDocumentResult{}, err
 		}
 		result, err := s.RenderTemplate(ctx, templateRequest)
-		if err != nil {
+		if err == nil {
+			return model.DraftDocumentResult{
+				FileName:     result.FileName,
+				Path:         result.Path,
+				DownloadURL:  result.DownloadURL,
+				MIMEType:     result.MIMEType,
+				SizeBytes:    result.SizeBytes,
+				ReviewNotes:  validation.ReviewNotes,
+				TemplateName: draft.TemplateName,
+				Route:        formaldoc.RouteTemplate,
+			}, nil
+		}
+		if !shouldFallbackToStructured(err) {
 			return model.DraftDocumentResult{}, err
 		}
-		return model.DraftDocumentResult{
-			FileName:     result.FileName,
-			Path:         result.Path,
-			DownloadURL:  result.DownloadURL,
-			MIMEType:     result.MIMEType,
-			SizeBytes:    result.SizeBytes,
-			ReviewNotes:  validation.ReviewNotes,
-			TemplateName: draft.TemplateName,
-			Route:        formaldoc.RouteTemplate,
-		}, nil
 	}
 	converted, err := formaldoc.ToGenerateRequest(draft)
 	if err != nil {
 		return model.DraftDocumentResult{}, err
+	}
+	if strings.TrimSpace(draft.TemplateName) != "" && formaldoc.RecommendedRoute(draft, s.config.DocumentTypeTemplateMap) == formaldoc.RouteTemplate {
+		converted.ReviewNotes = append(converted.ReviewNotes, fmt.Sprintf("模板渲染失败，已回退为结构化生成：%s", draft.TemplateName))
 	}
 	result, err := s.Generate(ctx, converted.Request)
 	if err != nil {
@@ -289,6 +289,11 @@ func (s *Service) normalizeGenerateRequest(input model.GenerateDocumentRequest) 
 		input.Content[index].DisplayText = strings.TrimSpace(input.Content[index].DisplayText)
 		input.Content[index].Levels = strings.TrimSpace(input.Content[index].Levels)
 	}
+	// Filter out empty paragraph blocks: the auto-generated JSON Schema from
+	// model.GenerateDocumentRequest marks text and runs as optional (omitempty),
+	// so LLM-generated calls may include paragraphs without text or runs. We
+	// silently skip these instead of rejecting with an error.
+	input.Content = filterEmptyParagraphs(input.Content)
 	return input
 }
 
@@ -299,6 +304,20 @@ func normalizeTemplateRequest(input model.RenderTemplateRequest) model.RenderTem
 		input.Data = map[string]any{}
 	}
 	return input
+}
+
+func filterEmptyParagraphs(blocks []model.ContentBlock) []model.ContentBlock {
+	if len(blocks) == 0 {
+		return blocks
+	}
+	filtered := make([]model.ContentBlock, 0, len(blocks))
+	for _, b := range blocks {
+		if b.Type == "paragraph" && b.Text == "" && len(b.Runs) == 0 {
+			continue
+		}
+		filtered = append(filtered, b)
+	}
+	return filtered
 }
 
 func validateGenerateRequest(input model.GenerateDocumentRequest) error {
@@ -353,6 +372,14 @@ func validateTemplateRequest(input model.RenderTemplateRequest) error {
 		return fmt.Errorf("template_name is required")
 	}
 	return nil
+}
+
+func shouldFallbackToStructured(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(strings.TrimSpace(err.Error()))
+	return strings.Contains(message, "template not found") || strings.Contains(message, "missing keys:")
 }
 
 func defaultFileName(value, fallback string) string {

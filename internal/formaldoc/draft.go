@@ -13,21 +13,21 @@ const (
 )
 
 type Draft struct {
-	SchemaVersion    string            `json:"schema_version"`
-	DocumentType     string            `json:"document_type"`
-	Title            string            `json:"title"`
+	SchemaVersion    string            `json:"schema_version,omitempty"`
+	DocumentType     string            `json:"document_type,omitempty"`
+	Title            string            `json:"title,omitempty"`
 	Subtitle         string            `json:"subtitle,omitempty"`
 	Author           string            `json:"author,omitempty"`
 	Organization     string            `json:"organization,omitempty"`
-	Audience         string            `json:"audience"`
-	Tone             string            `json:"tone"`
-	Language         string            `json:"language"`
+	Audience         string            `json:"audience,omitempty"`
+	Tone             string            `json:"tone,omitempty"`
+	Language         string            `json:"language,omitempty"`
 	HeaderText       string            `json:"header_text,omitempty"`
 	FooterPageNumber bool              `json:"footer_page_number,omitempty"`
 	IncludeTOC       bool              `json:"include_toc,omitempty"`
 	TemplateName     string            `json:"template_name,omitempty"`
 	Summary          string            `json:"summary,omitempty"`
-	Sections         []Section         `json:"sections"`
+	Sections         []Section         `json:"sections,omitempty"`
 	Appendices       []Appendix        `json:"appendices,omitempty"`
 	References       []Reference       `json:"references,omitempty"`
 	Placeholders     map[string]string `json:"placeholders,omitempty"`
@@ -36,24 +36,24 @@ type Draft struct {
 
 type Section struct {
 	ID       string  `json:"id,omitempty"`
-	Title    string  `json:"title"`
-	Level    int     `json:"level"`
+	Title    string  `json:"title,omitempty"`
+	Level    int     `json:"level,omitempty"`
 	Required bool    `json:"required,omitempty"`
-	Blocks   []Block `json:"blocks"`
+	Blocks   []Block `json:"blocks,omitempty"`
 }
 
 type Appendix struct {
-	Title  string  `json:"title"`
-	Blocks []Block `json:"blocks"`
+	Title  string  `json:"title,omitempty"`
+	Blocks []Block `json:"blocks,omitempty"`
 }
 
 type Reference struct {
-	Title string `json:"title"`
-	URL   string `json:"url"`
+	Title string `json:"title,omitempty"`
+	URL   string `json:"url,omitempty"`
 }
 
 type Block struct {
-	Type        string     `json:"type"`
+	Type        string     `json:"type,omitempty"`
 	Text        string     `json:"text,omitempty"`
 	Level       int        `json:"level,omitempty"`
 	Rows        [][]string `json:"rows,omitempty"`

@@ -2,6 +2,7 @@ package document
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,6 +21,18 @@ func (stubProvider) Generate(_ context.Context, input model.GenerateDocumentRequ
 
 func (stubProvider) RenderTemplate(_ context.Context, templatePath string, _ map[string]any, outputName string) (model.DocumentResult, error) {
 	return model.DocumentResult{FileName: outputName, Path: templatePath}, nil
+}
+
+type failingTemplateProvider struct {
+	renderErr error
+}
+
+func (p failingTemplateProvider) Generate(_ context.Context, input model.GenerateDocumentRequest, outputName string) (model.DocumentResult, error) {
+	return model.DocumentResult{FileName: outputName, Path: outputName}, nil
+}
+
+func (p failingTemplateProvider) RenderTemplate(_ context.Context, templatePath string, _ map[string]any, outputName string) (model.DocumentResult, error) {
+	return model.DocumentResult{}, p.renderErr
 }
 
 func TestGenerateRejectsInvalidBlocks(t *testing.T) {
@@ -271,6 +284,110 @@ func TestGenerateFromDraftUsesTemplateRoute(t *testing.T) {
 	}
 	if result.TemplateName != "business-letter.docx" {
 		t.Fatalf("unexpected template name: %s", result.TemplateName)
+	}
+}
+
+func TestGenerateFromDraftAppliesRecommendedTemplate(t *testing.T) {
+	tempDir := t.TempDir()
+	cfg := testConfig(tempDir)
+	service := NewService(cfg, stubProvider{}, nil)
+	if err := os.MkdirAll(cfg.DocxTemplateDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(cfg.DocxTemplateDir, "business-letter.docx"), []byte("template"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := service.GenerateFromDraft(context.Background(), formaldoc.Draft{
+		SchemaVersion: formaldoc.SchemaVersion,
+		DocumentType:  formaldoc.DocumentTypeBusinessLetter,
+		Title:         "说明函",
+		Audience:      "customer",
+		Tone:          "formal",
+		Language:      "zh-CN",
+		Sections: []formaldoc.Section{
+			{Title: "一、发函背景", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "背景"}}},
+			{Title: "二、发函事项", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "事项"}}},
+			{Title: "三、具体说明", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "说明"}}},
+			{Title: "四、后续安排", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "安排"}}},
+		},
+		Placeholders: map[string]string{"recipient_name": "张三"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Route != formaldoc.RouteTemplate {
+		t.Fatalf("expected template route, got %s", result.Route)
+	}
+	if result.TemplateName != "business-letter.docx" {
+		t.Fatalf("unexpected template name: %s", result.TemplateName)
+	}
+}
+
+func TestGenerateFromDraftFallsBackToStructuredWhenTemplateKeysMissing(t *testing.T) {
+	tempDir := t.TempDir()
+	cfg := testConfig(tempDir)
+	service := NewService(cfg, failingTemplateProvider{renderErr: fmt.Errorf("template: missing keys: organization, recipient_name, summary, sender_name")}, nil)
+
+	result, err := service.GenerateFromDraft(context.Background(), formaldoc.Draft{
+		SchemaVersion: formaldoc.SchemaVersion,
+		DocumentType:  formaldoc.DocumentTypeBusinessLetter,
+		Title:         "停产通知",
+		Audience:      "customer",
+		Tone:          "formal",
+		Language:      "zh-CN",
+		Sections: []formaldoc.Section{
+			{Title: "一、发函背景", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "背景"}}},
+			{Title: "二、发函事项", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "事项"}}},
+			{Title: "三、具体说明", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "说明"}}},
+			{Title: "四、后续安排", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "安排"}}},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Route != formaldoc.RouteStructured {
+		t.Fatalf("expected structured fallback, got %s", result.Route)
+	}
+	if len(result.ReviewNotes) == 0 {
+		t.Fatal("expected fallback review note")
+	}
+	if !strings.Contains(strings.Join(result.ReviewNotes, " | "), "模板渲染失败") {
+		t.Fatalf("expected fallback note, got %#v", result.ReviewNotes)
+	}
+	if result.TemplateName != "business-letter.docx" {
+		t.Fatalf("unexpected template name: %s", result.TemplateName)
+	}
+}
+
+func TestGenerateFromDraftReturnsNonFallbackTemplateErrors(t *testing.T) {
+	tempDir := t.TempDir()
+	cfg := testConfig(tempDir)
+	service := NewService(cfg, failingTemplateProvider{renderErr: context.DeadlineExceeded}, nil)
+	if err := os.MkdirAll(cfg.DocxTemplateDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(cfg.DocxTemplateDir, "business-letter.docx"), []byte("template"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := service.GenerateFromDraft(context.Background(), formaldoc.Draft{
+		SchemaVersion: formaldoc.SchemaVersion,
+		DocumentType:  formaldoc.DocumentTypeBusinessLetter,
+		Title:         "停产通知",
+		Audience:      "customer",
+		Tone:          "formal",
+		Language:      "zh-CN",
+		TemplateName:  "business-letter.docx",
+		Sections: []formaldoc.Section{
+			{Title: "一、发函背景", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "背景"}}},
+			{Title: "二、发函事项", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "事项"}}},
+			{Title: "三、具体说明", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "说明"}}},
+			{Title: "四、后续安排", Level: 1, Blocks: []formaldoc.Block{{Type: "paragraph", Text: "安排"}}},
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), context.DeadlineExceeded.Error()) {
+		t.Fatalf("expected non-fallback error, got %v", err)
 	}
 }
 

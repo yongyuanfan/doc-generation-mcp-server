@@ -83,6 +83,19 @@ func ToTemplateRequest(d Draft) (model.RenderTemplateRequest, error) {
 	data["summary"] = d.Summary
 	data["header_text"] = d.HeaderText
 	data["footer_page_number"] = d.FooterPageNumber
+	if strings.TrimSpace(d.Organization) != "" {
+		if _, ok := data["sender_name"]; !ok {
+			data["sender_name"] = d.Organization
+		}
+	}
+	if strings.TrimSpace(d.Summary) == "" {
+		if _, ok := data["summary"]; !ok {
+			data["summary"] = d.Title
+		}
+	}
+	if _, ok := data["organization"]; !ok && strings.TrimSpace(d.Organization) != "" {
+		data["organization"] = d.Organization
+	}
 	return model.RenderTemplateRequest{
 		TemplateName: d.TemplateName,
 		FileName:     defaultFileNameFromTitle(d.Title),
