@@ -25,6 +25,14 @@ type Config struct {
 	DocxMaxRequestBodyBytes int64
 	DocxMaxFileAge          time.Duration
 	DocumentTypeTemplateMap map[string]string
+	MinIOEndpoint           string
+	MinIOAccessKey          string
+	MinIOSecretKey          string
+	MinIOBucket             string
+	MinIOUseSSL             bool
+	MinIOPublicBaseURL      string
+	MinIOObjectPrefix       string
+	MinIOAutoCreateBucket   bool
 }
 
 func Load() (Config, error) {
@@ -48,6 +56,16 @@ func Load() (Config, error) {
 	}
 
 	maxFileAgeMinutes, err := intFromEnv("DOCX_MAX_FILE_AGE_MINUTES", 60)
+	if err != nil {
+		return Config{}, err
+	}
+
+	minioUseSSL, err := boolFromEnv("MINIO_USE_SSL", false)
+	if err != nil {
+		return Config{}, err
+	}
+
+	minioAutoCreateBucket, err := boolFromEnv("MINIO_AUTO_CREATE_BUCKET", false)
 	if err != nil {
 		return Config{}, err
 	}
@@ -77,6 +95,14 @@ func Load() (Config, error) {
 		DocxMaxRequestBodyBytes: maxRequestBytes,
 		DocxMaxFileAge:          time.Duration(maxFileAgeMinutes) * time.Minute,
 		DocumentTypeTemplateMap: documentTypeTemplateMapFromEnv(),
+		MinIOEndpoint:           strings.TrimSpace(os.Getenv("MINIO_ENDPOINT")),
+		MinIOAccessKey:          strings.TrimSpace(os.Getenv("MINIO_ACCESS_KEY")),
+		MinIOSecretKey:          strings.TrimSpace(os.Getenv("MINIO_SECRET_KEY")),
+		MinIOBucket:             strings.TrimSpace(os.Getenv("MINIO_BUCKET")),
+		MinIOUseSSL:             minioUseSSL,
+		MinIOPublicBaseURL:      strings.TrimRight(strings.TrimSpace(os.Getenv("MINIO_PUBLIC_BASE_URL")), "/"),
+		MinIOObjectPrefix:       strings.Trim(strings.TrimSpace(envOrDefault("MINIO_OBJECT_PREFIX", "documents")), "/"),
+		MinIOAutoCreateBucket:   minioAutoCreateBucket,
 	}
 
 	return cfg, nil
@@ -141,6 +167,19 @@ func int64FromEnv(key string, fallback int64) (int64, error) {
 	}
 	if parsed <= 0 {
 		return 0, fmt.Errorf("invalid %s: must be greater than 0", key)
+	}
+	return parsed, nil
+}
+
+func boolFromEnv(key string, fallback bool) (bool, error) {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback, nil
+	}
+
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return false, fmt.Errorf("invalid %s: %w", key, err)
 	}
 	return parsed, nil
 }

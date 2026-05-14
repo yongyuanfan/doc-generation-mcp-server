@@ -3,7 +3,9 @@ package document
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -12,6 +14,7 @@ import (
 	"github.com/yong/doc-generation-mcp-server/internal/config"
 	"github.com/yong/doc-generation-mcp-server/internal/formaldoc"
 	"github.com/yong/doc-generation-mcp-server/internal/model"
+	"github.com/yong/doc-generation-mcp-server/internal/storage"
 )
 
 type provider interface {
@@ -22,10 +25,11 @@ type provider interface {
 type Service struct {
 	config   config.Config
 	provider provider
+	uploader storage.Uploader
 }
 
-func NewService(cfg config.Config, provider provider) *Service {
-	return &Service{config: cfg, provider: provider}
+func NewService(cfg config.Config, provider provider, uploader storage.Uploader) *Service {
+	return &Service{config: cfg, provider: provider, uploader: uploader}
 }
 
 func (s *Service) Generate(ctx context.Context, input model.GenerateDocumentRequest) (model.DocumentResult, error) {
@@ -43,6 +47,9 @@ func (s *Service) Generate(ctx context.Context, input model.GenerateDocumentRequ
 		return model.DocumentResult{}, err
 	}
 	result.DownloadURL = s.config.APIPrefix + "/documents/files/" + result.FileName
+	if err := s.uploadToMinIO(ctx, &result); err != nil {
+		log.Printf("upload to minio failed for file=%s: %v", result.FileName, err)
+	}
 	return result, nil
 }
 
@@ -65,6 +72,9 @@ func (s *Service) RenderTemplate(ctx context.Context, input model.RenderTemplate
 		return model.DocumentResult{}, err
 	}
 	result.DownloadURL = s.config.APIPrefix + "/documents/files/" + result.FileName
+	if err := s.uploadToMinIO(ctx, &result); err != nil {
+		log.Printf("upload to minio failed for file=%s: %v", result.FileName, err)
+	}
 	return result, nil
 }
 
@@ -228,6 +238,38 @@ func (s *Service) cleanupExpiredFiles() {
 		}
 		_ = os.Remove(filepath.Join(s.config.DocxTempDir, entry.Name()))
 	}
+}
+
+const docxMIMEType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+func (s *Service) uploadToMinIO(ctx context.Context, result *model.DocumentResult) error {
+	if s.uploader == nil {
+		return nil
+	}
+
+	data, err := os.ReadFile(result.Path)
+	if err != nil {
+		return fmt.Errorf("read file for upload: %w", err)
+	}
+
+	objectName := buildDocxObjectName(s.config.MinIOObjectPrefix, result.FileName, time.Now())
+
+	uploadedURL, err := s.uploader.Upload(ctx, objectName, docxMIMEType, data)
+	if err != nil {
+		return err
+	}
+
+	result.DownloadURL = uploadedURL
+	log.Printf("uploaded file to minio: %s -> %s", result.FileName, uploadedURL)
+	return nil
+}
+
+func buildDocxObjectName(prefix, fileName string, now time.Time) string {
+	datePath := now.UTC().Format("2006/01/02")
+	if prefix == "" {
+		return path.Join(datePath, fileName)
+	}
+	return path.Join(prefix, datePath, fileName)
 }
 
 func (s *Service) normalizeGenerateRequest(input model.GenerateDocumentRequest) model.GenerateDocumentRequest {

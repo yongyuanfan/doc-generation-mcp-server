@@ -13,6 +13,7 @@ import (
 	"github.com/yong/doc-generation-mcp-server/internal/mcpserver"
 	provider "github.com/yong/doc-generation-mcp-server/internal/provider/docx"
 	docsvc "github.com/yong/doc-generation-mcp-server/internal/service/document"
+	miniostorage "github.com/yong/doc-generation-mcp-server/internal/storage/minio"
 )
 
 func main() {
@@ -22,7 +23,11 @@ func main() {
 	}
 
 	providerClient := provider.NewClient(cfg)
-	service := docsvc.NewService(cfg, providerClient)
+	uploader, err := miniostorage.NewClient(context.Background(), cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	service := docsvc.NewService(cfg, providerClient, uploader)
 
 	mcpHandler := mcpserver.NewHandler(cfg, service)
 	apiHandler := apiserver.NewHandler(cfg, service)

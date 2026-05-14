@@ -24,7 +24,7 @@ func (stubProvider) RenderTemplate(_ context.Context, templatePath string, _ map
 
 func TestGenerateRejectsInvalidBlocks(t *testing.T) {
 	tempDir := t.TempDir()
-	service := NewService(testConfig(tempDir), stubProvider{})
+	service := NewService(testConfig(tempDir), stubProvider{}, nil)
 
 	_, err := service.Generate(context.Background(), model.GenerateDocumentRequest{
 		Content: []model.ContentBlock{{Type: "table", Rows: [][]string{{"a"}, {"a", "b"}}}},
@@ -36,7 +36,7 @@ func TestGenerateRejectsInvalidBlocks(t *testing.T) {
 
 func TestGenerateRejectsHyperlinkWithoutURL(t *testing.T) {
 	tempDir := t.TempDir()
-	service := NewService(testConfig(tempDir), stubProvider{})
+	service := NewService(testConfig(tempDir), stubProvider{}, nil)
 
 	_, err := service.Generate(context.Background(), model.GenerateDocumentRequest{
 		Content: []model.ContentBlock{{Type: "hyperlink", DisplayText: "Open"}},
@@ -48,7 +48,7 @@ func TestGenerateRejectsHyperlinkWithoutURL(t *testing.T) {
 
 func TestGenerateRejectsImageWithoutSource(t *testing.T) {
 	tempDir := t.TempDir()
-	service := NewService(testConfig(tempDir), stubProvider{})
+	service := NewService(testConfig(tempDir), stubProvider{}, nil)
 
 	_, err := service.Generate(context.Background(), model.GenerateDocumentRequest{
 		Content: []model.ContentBlock{{Type: "image"}},
@@ -59,7 +59,7 @@ func TestGenerateRejectsImageWithoutSource(t *testing.T) {
 }
 
 func TestCapabilitiesIncludeExtendedBlocks(t *testing.T) {
-	service := NewService(testConfig(t.TempDir()), stubProvider{})
+	service := NewService(testConfig(t.TempDir()), stubProvider{}, nil)
 	capabilities := service.Capabilities()
 	if !capabilities.FooterPageNumber {
 		t.Fatal("expected footer page number capability")
@@ -77,7 +77,7 @@ func TestCapabilitiesIncludeExtendedBlocks(t *testing.T) {
 
 func TestRenderTemplateRejectsMissingTemplate(t *testing.T) {
 	tempDir := t.TempDir()
-	service := NewService(testConfig(tempDir), stubProvider{})
+	service := NewService(testConfig(tempDir), stubProvider{}, nil)
 
 	_, err := service.RenderTemplate(context.Background(), model.RenderTemplateRequest{
 		TemplateName: "missing.docx",
@@ -90,7 +90,7 @@ func TestRenderTemplateRejectsMissingTemplate(t *testing.T) {
 func TestListTemplatesFiltersNonDocx(t *testing.T) {
 	tempDir := t.TempDir()
 	cfg := testConfig(tempDir)
-	service := NewService(cfg, stubProvider{})
+	service := NewService(cfg, stubProvider{}, nil)
 
 	if err := os.MkdirAll(cfg.DocxTemplateDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -112,7 +112,7 @@ func TestListTemplatesFiltersNonDocx(t *testing.T) {
 
 func TestDownloadPathRejectsInvalidName(t *testing.T) {
 	tempDir := t.TempDir()
-	service := NewService(testConfig(tempDir), stubProvider{})
+	service := NewService(testConfig(tempDir), stubProvider{}, nil)
 
 	_, err := service.DownloadPath("../secret.docx")
 	if err == nil || !strings.Contains(err.Error(), "invalid file name") {
@@ -123,7 +123,7 @@ func TestDownloadPathRejectsInvalidName(t *testing.T) {
 func TestDownloadPathFindsExistingFile(t *testing.T) {
 	tempDir := t.TempDir()
 	cfg := testConfig(tempDir)
-	service := NewService(cfg, stubProvider{})
+	service := NewService(cfg, stubProvider{}, nil)
 
 	if err := os.MkdirAll(cfg.DocxTempDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -144,7 +144,7 @@ func TestDownloadPathFindsExistingFile(t *testing.T) {
 
 func TestGenerateFromDraftReturnsReviewNotes(t *testing.T) {
 	tempDir := t.TempDir()
-	service := NewService(testConfig(tempDir), stubProvider{})
+	service := NewService(testConfig(tempDir), stubProvider{}, nil)
 
 	result, err := service.GenerateFromDraft(context.Background(), formaldoc.Draft{
 		SchemaVersion:    formaldoc.SchemaVersion,
@@ -179,7 +179,7 @@ func TestGenerateFromDraftReturnsReviewNotes(t *testing.T) {
 }
 
 func TestValidateDraftReturnsIssues(t *testing.T) {
-	service := NewService(testConfig(t.TempDir()), stubProvider{})
+	service := NewService(testConfig(t.TempDir()), stubProvider{}, nil)
 	result := service.ValidateDraft(formaldoc.Draft{})
 	if result.Valid {
 		t.Fatal("expected invalid result")
@@ -190,7 +190,7 @@ func TestValidateDraftReturnsIssues(t *testing.T) {
 }
 
 func TestValidateDraftReturnsRecommendations(t *testing.T) {
-	service := NewService(testConfig(t.TempDir()), stubProvider{})
+	service := NewService(testConfig(t.TempDir()), stubProvider{}, nil)
 	result := service.ValidateDraft(formaldoc.Draft{
 		SchemaVersion: formaldoc.SchemaVersion,
 		DocumentType:  formaldoc.DocumentTypeBusinessLetter,
@@ -216,7 +216,7 @@ func TestValidateDraftReturnsRecommendations(t *testing.T) {
 func TestValidateDraftUsesConfiguredTemplateMapping(t *testing.T) {
 	cfg := testConfig(t.TempDir())
 	cfg.DocumentTypeTemplateMap = map[string]string{"business_letter": "custom-letter.docx"}
-	service := NewService(cfg, stubProvider{})
+	service := NewService(cfg, stubProvider{}, nil)
 	result := service.ValidateDraft(formaldoc.Draft{
 		SchemaVersion: formaldoc.SchemaVersion,
 		DocumentType:  formaldoc.DocumentTypeBusinessLetter,
@@ -239,7 +239,7 @@ func TestValidateDraftUsesConfiguredTemplateMapping(t *testing.T) {
 func TestGenerateFromDraftUsesTemplateRoute(t *testing.T) {
 	tempDir := t.TempDir()
 	cfg := testConfig(tempDir)
-	service := NewService(cfg, stubProvider{})
+	service := NewService(cfg, stubProvider{}, nil)
 	if err := os.MkdirAll(cfg.DocxTemplateDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
