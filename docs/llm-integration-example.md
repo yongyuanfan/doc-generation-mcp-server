@@ -99,7 +99,7 @@ Example output:
 Call the validation endpoint first.
 
 ```bash
-curl -X POST http://localhost:9101/api/v1/documents/validate-draft \
+curl -X POST http://localhost:9103/api/v1/documents/validate-draft \
   -H 'Content-Type: application/json' \
   -d @draft.json
 ```
@@ -131,7 +131,7 @@ For business letters, the service may return:
 If validation succeeds, call the generation endpoint.
 
 ```bash
-curl -X POST http://localhost:9101/api/v1/documents/generate-from-draft \
+curl -X POST http://localhost:9103/api/v1/documents/generate-from-draft \
   -H 'Content-Type: application/json' \
   -d @draft.json
 ```
@@ -155,7 +155,7 @@ Example response:
 ## Step 4: Download The File
 
 ```bash
-curl -O http://localhost:9101/api/v1/documents/files/研发中心第20周工作周报-1778592333617346000.docx
+curl -O http://localhost:9103/api/v1/documents/files/研发中心第20周工作周报-1778592333617346000.docx
 ```
 
 ## MCP Flow

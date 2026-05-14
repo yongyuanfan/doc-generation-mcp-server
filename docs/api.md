@@ -33,7 +33,7 @@ This endpoint validates a `FormalDocumentDraftV1` payload without generating a d
 Example:
 
 ```bash
-curl -X POST http://localhost:9101/api/v1/documents/generate-from-draft \
+curl -X POST http://localhost:9103/api/v1/documents/generate-from-draft \
   -H 'Content-Type: application/json' \
   -d '{
     "schema_version": "1.0",

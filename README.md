@@ -27,9 +27,9 @@ go run ./cmd/server
 
 Default endpoints:
 
-- MCP: `http://localhost:9101/mcp`
-- API: `http://localhost:9101/api/v1`
-- Health: `http://localhost:9101/healthz`
+- MCP: `http://localhost:9103/mcp`
+- API: `http://localhost:9103/api/v1`
+- Health: `http://localhost:9103/healthz`
 
 ## Templates
 
